@@ -1,9 +1,11 @@
-# GlobalGates — AI 발표 자료
+# GlobalGates AI 발표 자료
 
-> **"AI로 연결하는 글로벌 B2B 비즈니스 소셜 마켓"**
+> **AI로 연결하는 글로벌 B2B 비즈니스 소셜 마켓**
 >
-> 중소기업의 해외 판로 개척, 바이어 탐색, 무역 정보 접근 문제를
-> **Naive Bayes 분류**, **프로필 기반 추천**, **RAG 챗봇**, **n8n 자동화**로 풀어낸 GlobalGates AI 구현 자료입니다.
+> GlobalGates는 중소기업이 해외 바이어를 찾고, 상품을 올바른 카테고리에 노출하고,
+> 복잡한 무역 문서를 이해하는 과정을 AI로 보조하는 서비스입니다.
+>
+> 발표 흐름은 **분류 → 추천 → RAG → n8n 자동화** 순서로 구성했습니다.
 
 ![Java](https://img.shields.io/badge/Java-17-007396?style=flat-square&logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.11-6DB33F?style=flat-square&logo=springboot&logoColor=white)
@@ -11,117 +13,109 @@
 ![Python](https://img.shields.io/badge/Python-ML%20%2F%20RAG-3776AB?style=flat-square&logo=python&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Service%20DB-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Cache%20%2F%20Vector-CB0000?style=flat-square&logo=redis&logoColor=white)
-![AWS S3](https://img.shields.io/badge/AWS%20S3-Document%20Storage-FF9900?style=flat-square&logo=amazons3&logoColor=white)
-![n8n](https://img.shields.io/badge/n8n-Workflow%20Automation-EA4B71?style=flat-square&logo=n8n&logoColor=white)
+![AWS S3](https://img.shields.io/badge/AWS%20S3-RAG%20Documents-FF9900?style=flat-square&logo=amazons3&logoColor=white)
+![n8n](https://img.shields.io/badge/n8n-News%20Automation-EA4B71?style=flat-square&logo=n8n&logoColor=white)
 
 ---
 
 ## 목차
 
 1. [기획 배경 & 의도](#1-기획-배경--의도)
-2. [데이터 수집 및 전처리 — 네이버 OpenAPI와 서비스 데이터 구성](#2-데이터-수집-및-전처리--네이버-openapi와-서비스-데이터-구성)
-3. [머신러닝 (분류) — Naive Bayes 기반 상품 카테고리 추천](#3-머신러닝-분류--naive-bayes-기반-상품-카테고리-추천)
-4. [머신러닝 (추천) — 프로필 기반 팔로우 추천 시스템](#4-머신러닝-추천--프로필-기반-팔로우-추천-시스템)
-5. [LLM (RAG) — 무역 문서 기반 AI 챗봇](#5-llm-rag--무역-문서-기반-ai-챗봇)
-6. [LLM (n8n) — RSS 뉴스 요약 자동화](#6-llm-n8n--rss-뉴스-요약-자동화)
-7. [서비스 연동 — Spring Boot와 FastAPI 연결 구조](#7-서비스-연동--spring-boot와-fastapi-연결-구조)
-8. [구현 결과 & 발표 핵심 포인트](#8-구현-결과--발표-핵심-포인트)
+2. [데이터 수집 및 전처리](#2-데이터-수집-및-전처리)
+3. [머신러닝 분류 - Naive Bayes](#3-머신러닝-분류---naive-bayes)
+4. [추천 시스템 - 팔로우 추천](#4-추천-시스템---팔로우-추천)
+5. [LLM RAG - 무역 문서 챗봇](#5-llm-rag---무역-문서-챗봇)
+6. [n8n - 뉴스 요약 자동화](#6-n8n---뉴스-요약-자동화)
+7. [서비스 연동 구조](#7-서비스-연동-구조)
+8. [발표 핵심 정리](#8-발표-핵심-정리)
 
 ---
 
 ## 1. 기획 배경 & 의도
 
-### GlobalGates의 문제의식
+중소기업은 국내 기업 수의 대부분을 차지하지만, 실제 수출 교역액은 대기업에 크게 의존합니다.
+GlobalGates는 이 격차를 줄이기 위해 **상품 등록, 거래 상대 탐색, 무역 정보 탐색, 뉴스 수집**에 AI를 적용했습니다.
 
-중소기업은 제품 경쟁력이 있어도 해외 바이어를 찾고, 상품을 적절한 카테고리에 노출하고, 국가별 통관/FTA/수출입 문서를 이해하는 데 높은 비용을 부담합니다.
+![중소기업 수출 구조 분석](images/export_gap_analysis_01.png)
 
-GlobalGates는 이 문제를 **B2B 소셜 마켓 + AI 보조 기능**으로 해결하려는 플랫폼입니다.
+![중소기업 수출 추이](images/export_gap_analysis_02.png)
 
-| 문제 | AI 적용 방향 | 서비스 가치 |
+| 문제 | AI 적용 | 사용자가 얻는 가치 |
 |---|---|---|
-| 상품이 적절한 카테고리에 노출되지 않음 | 상품명·설명·태그 기반 카테고리 자동 추천 | 등록 마찰 감소, 검색 품질 개선 |
-| 관심사와 거래 목적이 맞는 사용자를 찾기 어려움 | 프로필·관심 카테고리 기반 팔로우 추천 | 바이어/셀러 연결 가능성 확대 |
-| 무역 문서와 통관 정보를 직접 찾기 어려움 | RAG 기반 문서 질의 챗봇 | 실무 문서 탐색 비용 절감 |
-| 외부 경제/무역 뉴스를 계속 확인하기 번거로움 | n8n 기반 RSS 수집 및 AI 요약 | 시장 시그널 자동 수집 |
+| 상품을 어떤 카테고리에 올릴지 애매함 | Naive Bayes 카테고리 분류 | 상품 등록 시간 감소 |
+| 거래 목적이 맞는 사람을 찾기 어려움 | 프로필 기반 팔로우 추천 | 바이어/셀러 연결 가능성 증가 |
+| 무역 문서를 직접 읽기 어려움 | RAG 기반 문서 챗봇 | 통관/수출입 정보 탐색 비용 감소 |
+| 해외 경제 뉴스를 계속 보기 어려움 | n8n RSS 자동 수집 및 요약 | 시장 이슈 자동 파악 |
 
-### AI 적용 흐름
+### 전체 AI 흐름
 
 ```mermaid
 flowchart LR
-    A["사용자/서비스 데이터<br/>상품명 · 설명 · 태그 · 회원 프로필"] --> B["1. Naive Bayes 분류<br/>상품 카테고리 Top-3 추천"]
-    B --> C["2. 추천 시스템<br/>프로필·관심사 기반 팔로우 추천"]
-    C --> D["3. RAG 챗봇<br/>무역 문서 기반 질의 응답"]
-    D --> E["4. n8n 자동화<br/>RSS 뉴스 수집 및 요약"]
+    A["상품명 · 설명 · 태그"] --> B["1. 분류 AI<br/>카테고리 Top-3 추천"]
+    C["회원 프로필 · 관심 카테고리"] --> D["2. 추천 AI<br/>팔로우 추천"]
+    E["무역 PDF 문서"] --> F["3. RAG AI<br/>문서 기반 챗봇"]
+    G["RSS 뉴스"] --> H["4. n8n 자동화<br/>뉴스 요약"]
+
+    B --> I["Spring 화면 반영"]
+    D --> I
+    F --> I
+    H --> J["요약 결과 제공"]
 ```
 
-핵심은 AI 기능을 따로 실험하는 데서 끝내지 않고, **실제 화면에서 발생하는 입력 → AI 추론 → 서비스 UI 반영**까지 연결했다는 점입니다.
-
 ---
 
-## 2. 데이터 수집 및 전처리 — 네이버 OpenAPI와 서비스 데이터 구성
+## 2. 데이터 수집 및 전처리
 
-> **목표**: 상품 카테고리 분류와 추천 시스템에 필요한 텍스트 데이터를 만들고, 실제 서비스 DB 데이터를 AI 기능에 연결 가능한 형태로 정리
+AI 기능별로 필요한 데이터가 다르기 때문에, 외부 데이터와 서비스 내부 데이터를 나눠서 구성했습니다.
 
-### 데이터 규모
-
-| 데이터 | 규모 | 사용 목적 |
+| 데이터 | 규모 | 사용 기능 |
 |---|---:|---|
-| 네이버 쇼핑 OpenAPI | 70,000건 | 상품명·브랜드·제조사 기반 카테고리 분류 |
-| 네이버 뉴스/블로그 OpenAPI | 112,000건 | 무역 행위 중심 텍스트 보강 |
-| 전체 원천 텍스트 | 182,000건 | 분류 모델 학습 후보 |
-| 최종 학습 데이터 | 176,426건 | 결측/노이즈 제거 후 모델 학습 |
-| CountVectorizer 어휘 수 | 396,276개 | 텍스트 벡터화 |
-| 분류 카테고리 | 12개 | GlobalGates 1단계 카테고리 |
+| 네이버 쇼핑 OpenAPI | 70,000건 | 상품 카테고리 분류 |
+| 네이버 뉴스/블로그 OpenAPI | 112,000건 | 무역/상품 텍스트 보강 |
+| 최종 학습 데이터 | 176,426건 | Naive Bayes 모델 학습 |
+| CountVectorizer 어휘 수 | 396,276개 | 텍스트를 숫자 벡터로 변환 |
+| 회원 데이터 | 508명 | 팔로우 추천 |
+| 팔로우 관계 | 2,422건 | 이미 연결된 회원 제외 |
+| 회원-카테고리 관계 | 1,605건 | 관심사 기반 추천 |
+| RAG PDF 문서 | 11개 / 315페이지 | 무역 문서 챗봇 |
 
-### 데이터별 역할
+### 전처리 개념
 
-| 데이터 | 출처 | 전처리 방식 | 연결 기능 |
-|---|---|---|---|
-| 상품 텍스트 | 네이버 쇼핑 OpenAPI | `title + brand + maker` 결합 | 상품 카테고리 분류 |
-| 뉴스/블로그 텍스트 | 네이버 뉴스·블로그 OpenAPI | `title + description` 결합, 1단계 라벨 추출 | 무역 행위 텍스트 보강 |
-| 회원 프로필 | PostgreSQL `tbl_member` | `member_bio` 정규화 | 팔로우 추천 |
-| 관심 카테고리 | PostgreSQL `tbl_member_category_rel` | 회원별 `category_text` 집계 | 팔로우 추천 |
-| 팔로우/차단 관계 | PostgreSQL `tbl_follow`, `tbl_block` | 이미 연결된 회원과 차단 관계 제외 | 추천 후보 필터링 |
-| 무역 PDF 문서 | 관리자 업로드/S3 | 문서 파싱, 청크 분할, 임베딩 | RAG 챗봇 |
+개발을 모르는 사람이 이해하기 쉽게 말하면, 전처리는 **AI가 읽을 수 있도록 글자를 정리하는 과정**입니다.
 
-### 분석 노트북
-
-| 목적 | 노트북 경로 |
-|---|---|
-| 네이버 쇼핑 데이터 수집 | `C:\gb_0900_hsh\ai\workspace\project\02_collect_naver_openapi.ipynb` |
-| 뉴스/블로그 데이터 수집 | `C:\gb_0900_hsh\ai\workspace\project\datasets\03_collect_naver_news_blog.ipynb` |
-| 상품 카테고리 분류 모델 | `C:\gb_0900_hsh\ai\workspace\project\globalgates_category_classifier.ipynb` |
-| 추천 시스템 검증 | `C:\gb_0900_hsh\ai\workspace\project\globalgates_follower_recommender_profile_score.ipynb` |
-| RAG 인덱스 생성 실험 | `C:\gb_0900_hsh\ai\workspace\project\RAG\02_build_trade_regulation_rag_redis.ipynb` |
-| n8n 워크플로우 | `C:\gb_0900_hsh\ai\workspace\project\n8n-news\n8n_news_hsh.json` |
+| 원본 | 전처리 결과 | 사용처 |
+|---|---|---|
+| 상품명, 설명, 태그 | 하나의 상품 설명 문장 | 카테고리 분류 |
+| 자기소개, 관심 카테고리 | 회원을 설명하는 문장 | 팔로우 추천 |
+| PDF 문서 | 짧은 문단 조각 | RAG 검색 |
+| RSS 뉴스 | 제목과 본문 요약 대상 | n8n 자동 요약 |
 
 ---
 
-## 3. 머신러닝 (분류) — Naive Bayes 기반 상품 카테고리 추천
+## 3. 머신러닝 분류 - Naive Bayes
 
-> **목표**: 상품명, 설명, 태그를 입력하면 GlobalGates 서비스 카테고리 Top-3를 추천
+> **목표**: 사용자가 상품명, 설명, 태그를 입력하면 가장 어울리는 카테고리 3개를 추천합니다.
 
-### 모델 개요
+### 왜 필요한가
 
-| 항목 | 내용 |
-|---|---|
-| 문제 유형 | 다중 분류 |
-| 예측 대상 | GlobalGates 1단계 카테고리 12개 |
-| 학습 데이터 | 네이버 쇼핑·뉴스·블로그 기반 최종 176,426건 |
-| 벡터화 | `CountVectorizer` |
-| 모델 | `MultinomialNB` |
-| 산출물 | `globalgates_category_model.pkl`, `globalgates_category_encoder.pkl` |
+상품 등록 화면에서 사용자가 카테고리를 직접 찾으면 시간이 오래 걸립니다.
+GlobalGates는 입력된 상품 텍스트를 분석해서 **가장 가능성이 높은 카테고리 Top-3**를 보여줍니다.
 
-### 성능 비교
+### 모델 성능
 
 | 모델 | Accuracy | Precision | Recall | F1 | AUC |
 |---|---:|---:|---:|---:|---:|
 | **CountVectorizer + MultinomialNB** | **0.9406** | 0.9429 | 0.9413 | **0.9408** | **0.9946** |
 | CountVectorizer + DecisionTree | 0.9147 | 0.9176 | 0.9165 | 0.9150 | 0.9530 |
 
-Naive Bayes는 Decision Tree보다 Accuracy, F1, AUC 모두 높았습니다. 특히 AUC가 약 **0.995**로 높아, 단일 정답뿐 아니라 **Top-3 추천 UX에 필요한 확률 순위**가 안정적이라고 판단했습니다.
+Naive Bayes는 Decision Tree보다 정확도와 AUC가 높았습니다. 특히 AUC가 **0.9946**으로 높아,
+정답 하나만 고르는 방식보다 **확률이 높은 후보 3개를 보여주는 화면 UX**에 적합했습니다.
 
-### 핵심 코드
+![Naive Bayes 분류 결과](images/globalgates_category_classifier_01.png)
+
+![Decision Tree 비교 결과](images/globalgates_category_classifier_02.png)
+
+### 학습 코드 핵심
 
 ```python
 m_nb_pipe = Pipeline([
@@ -134,77 +128,96 @@ prediction = m_nb_pipe.predict(X_test.values)
 proba = m_nb_pipe.predict_proba(X_test.values)
 ```
 
-### 서비스 적용 흐름
+**쉬운 설명**
+
+| 코드 | 의미 |
+|---|---|
+| `CountVectorizer()` | 사람이 쓴 문장을 AI가 계산할 수 있는 숫자로 바꿈 |
+| `MultinomialNB()` | 단어 출현 패턴을 보고 카테고리를 예측하는 모델 |
+| `predict_proba()` | 카테고리별 가능성을 확률로 계산 |
+
+### FastAPI 실제 코드
+
+```python
+@router.post("/category/predict", response_model=CategoryPredictResponse)
+async def predict_category(request: CategoryPredictRequest):
+    return await ai_service.predict_category(
+        request.postTitle,
+        request.postContent,
+        request.postTag,
+    )
+```
+
+```python
+text = " ".join(value for value in [post_title, post_content, post_tag] if value)
+probabilities = model.predict_proba([text])[0]
+
+ranked_indices = sorted(
+    range(len(probabilities)),
+    key=lambda i: probabilities[i],
+    reverse=True,
+)[:3]
+```
+
+**쉬운 설명**
+
+1. 사용자가 상품명, 설명, 태그를 입력합니다.
+2. FastAPI가 세 문장을 하나로 합칩니다.
+3. 모델이 카테고리별 확률을 계산합니다.
+4. 확률이 높은 3개 카테고리만 화면에 돌려줍니다.
+
+### 화면 적용 흐름
 
 ```mermaid
 sequenceDiagram
     participant User as 사용자
-    participant Spring as Spring Boot
-    participant FastAPI as FastAPI AI Server
-    participant Model as Naive Bayes Model
+    participant Spring as Spring Boot 화면 서버
+    participant FastAPI as FastAPI AI 서버
+    participant Model as Naive Bayes 모델
 
-    User->>Spring: 상품명·설명·태그 입력
-    Spring->>FastAPI: POST /api/ai/category/predict
-    FastAPI->>Model: predict_proba()
-    Model-->>FastAPI: 카테고리별 확률
-    FastAPI-->>Spring: Top-3 categoryName, score
-    Spring-->>User: 추천 카테고리 칩 렌더링
+    User->>Spring: 상품 정보 입력
+    Spring->>FastAPI: /api/ai/category/predict 요청
+    FastAPI->>Model: 카테고리 확률 계산
+    Model-->>FastAPI: Top-3 결과 반환
+    FastAPI-->>Spring: categoryName, score 전달
+    Spring-->>User: 추천 카테고리 칩 표시
 ```
-
-### 화면 연결
-
-| 구분 | 경로 |
-|---|---|
-| 화면 JS | `src/main/resources/static/js/mypage/event.js` |
-| Spring Controller | `src/main/java/com/app/globalgates/controller/ai/AIController.java` |
-| FastAPI Router | `C:\gb_0900_hsh\fastapi\workspace\globalgates\router\ai.py` |
-| FastAPI Service | `C:\gb_0900_hsh\fastapi\workspace\globalgates\service\ai_service.py` |
 
 ---
 
-## 4. 머신러닝 (추천) — 프로필 기반 팔로우 추천 시스템
+## 4. 추천 시스템 - 팔로우 추천
 
-> **목표**: 사용자 자기소개, 관심 카테고리, 팔로우/차단 관계를 바탕으로 연결 가능성이 높은 회원 추천
+> **목표**: 회원의 자기소개와 관심 카테고리를 보고, 연결 가능성이 높은 회원을 추천합니다.
 
-### 서비스 데이터 규모
+### 추천에 사용한 데이터
 
 | 데이터 | 규모 | 역할 |
 |---|---:|---|
-| 회원 데이터 | 508명 | 추천 대상 후보 |
-| 팔로우 관계 | 2,422건 | 이미 연결된 회원 제외 |
-| 회원-카테고리 관계 | 1,605건 | 관심사 텍스트 구성 |
-| TF-IDF 유사도 행렬 | 508 × 508 | 회원 간 프로필 유사도 계산 |
-| 화면 추천 개수 | Top-3 | 추천 카드 노출 |
+| 회원 데이터 | 508명 | 추천 후보 |
+| 팔로우 관계 | 2,422건 | 이미 팔로우한 회원 제외 |
+| 회원-카테고리 관계 | 1,605건 | 관심사 비교 |
+| TF-IDF 유사도 행렬 | 508 × 508 | 노트북 검증용 유사도 계산 |
+| 화면 추천 개수 | Top-3 | 사용자에게 보여줄 추천 카드 |
+
+![팔로우/인기도 분포](images/globalgates_follower_recommender_profile_score_01.png)
 
 ### 추천 로직
 
 ```mermaid
 flowchart TD
-    A["현재 회원 조회<br/>member_bio + category_text"] --> B["후보 회원 조회"]
-    B --> C["활성 회원만 유지"]
+    A["현재 회원 정보 조회"] --> B["자기소개 + 관심 카테고리 결합"]
+    B --> C["추천 후보 회원 조회"]
     C --> D["이미 팔로우한 회원 제외"]
     D --> E["차단 관계 제외"]
-    E --> F{"프로필 텍스트 있음?"}
-    F -- Yes --> G["텍스트 유사도 계산<br/>cosine similarity"]
-    F -- No --> H["Cold Start fallback<br/>follower_count 기반 정렬"]
-    G --> I["Top-K 추천"]
+    E --> F{"비교할 텍스트가 있는가?"}
+    F -- Yes --> G["텍스트 유사도 계산"]
+    F -- No --> H["팔로워 수 기반 Cold Start"]
+    G --> I["점수순 정렬"]
     H --> I
-    I --> J["추천 카드 렌더링"]
+    I --> J["Top-3 추천 카드 표시"]
 ```
 
-### 핵심 설계
-
-| 설계 포인트 | 설명 |
-|---|---|
-| 추천 텍스트 | `member_bio + 관심 카테고리`를 결합 |
-| 후보 필터링 | 본인, 기존 팔로우, 차단 관계 제외 |
-| 유사도 | 프로필 텍스트 기반 cosine similarity |
-| Cold Start | 프로필 텍스트가 없으면 팔로워 수 기반 fallback |
-| 운영 Top-K | FastAPI 기본 5개, Spring 화면에서는 Top-3 요청 |
-
-### FastAPI 운영 구현
-
-노트북에서는 `TF-IDF + cosine_similarity`로 추천 가능성을 검증했고, 운영 FastAPI에서는 DB에서 후보를 조회한 뒤 현재 회원 텍스트와 후보 텍스트의 cosine similarity를 계산합니다.
+### FastAPI 실제 코드
 
 ```python
 me_text = self.build_text(me)
@@ -218,24 +231,44 @@ else:
         row["candidate_source"] = "cold_start"
 ```
 
-### 화면 연결
+```python
+common = set(me_counter) & set(counter)
+dot = sum(me_counter[word] * counter[word] for word in common)
+return dot / (me_norm * norm)
+```
 
-| 구분 | 경로 |
+**쉬운 설명**
+
+| 단계 | 의미 |
 |---|---|
-| 추천 요청 JS | `src/main/resources/static/js/common/recommendation-service.js` |
-| 추천 렌더링 JS | `src/main/resources/static/js/common/recommendation-event.js` |
-| Spring Controller | `src/main/java/com/app/globalgates/controller/ai/AIController.java` |
-| Spring Service | `src/main/java/com/app/globalgates/service/AIService.java` |
-| FastAPI Service | `C:\gb_0900_hsh\fastapi\workspace\globalgates\service\follow_service.py` |
-| FastAPI Repository | `C:\gb_0900_hsh\fastapi\workspace\globalgates\repository\follow_repository.py` |
+| `build_text()` | 회원의 자기소개와 관심 카테고리를 한 문장으로 합침 |
+| `rank_with_tfidf()` | 나와 후보 회원의 문장이 얼마나 비슷한지 계산 |
+| `cold_start` | 정보가 부족한 회원은 팔로워 수 기준으로 임시 추천 |
+
+### 추천 결과가 화면에 나오는 과정
+
+```mermaid
+sequenceDiagram
+    participant Browser as 사용자 화면
+    participant Spring as Spring Boot
+    participant FastAPI as FastAPI
+    participant DB as PostgreSQL
+
+    Browser->>Spring: 추천 회원 요청
+    Spring->>FastAPI: /api/ai/follow/recommend
+    FastAPI->>DB: 회원/팔로우/차단 정보 조회
+    DB-->>FastAPI: 추천 후보 데이터
+    FastAPI-->>Spring: 추천 회원 ID와 점수
+    Spring-->>Browser: 프로필 이미지와 추천 카드 렌더링
+```
 
 ---
 
-## 5. LLM (RAG) — 무역 문서 기반 AI 챗봇
+## 5. LLM RAG - 무역 문서 챗봇
 
-> **목표**: 수출입/통관/FTA 문서를 검색 가능한 지식 기반으로 만들고, 사용자가 자연어로 질문할 수 있도록 구현
+> **목표**: PDF 무역 문서를 AI가 검색할 수 있게 만들고, 사용자가 질문하면 관련 문서를 근거로 답변합니다.
 
-### RAG 문서 처리 규모
+### RAG 처리 규모
 
 | 항목 | 수치 |
 |---|---:|
@@ -247,176 +280,187 @@ else:
 | 임베딩 차원 | 768 |
 | 질의 방식 | Hybrid Query |
 
-### RAG 처리 흐름
+### RAG를 쉽게 설명하면
+
+RAG는 AI가 모르는 내용을 상상해서 답하게 하는 방식이 아니라,
+**먼저 문서에서 관련 내용을 찾고, 그 내용을 바탕으로 답변하게 하는 구조**입니다.
+
+```mermaid
+flowchart LR
+    A["PDF 문서"] --> B["문서를 짧은 조각으로 분리"]
+    B --> C["각 조각을 숫자 벡터로 변환"]
+    C --> D["사용자 질문과 비슷한 문서 조각 검색"]
+    D --> E["검색 결과를 근거로 답변 생성"]
+```
+
+### FastAPI 문서 적재 코드
+
+```python
+@router.post("/ingest", response_model=RagIngestResponse)
+async def ingest(request: RagIngestRequest):
+    await rag_service.ingest_document_from_s3(request.s3Key)
+    return RagIngestResponse(message="문서 적재가 완료되었습니다.")
+```
+
+```python
+with tempfile.TemporaryDirectory(prefix="globalgates-rag-") as temp_dir:
+    local_path = Path(temp_dir) / f"source{suffix}"
+    download_from_s3(cleaned, local_path)
+    await self.ingest_document(str(local_path))
+```
+
+**쉬운 설명**
+
+1. 관리자가 PDF를 업로드합니다.
+2. Spring Boot가 파일을 S3에 저장합니다.
+3. FastAPI가 S3에서 파일을 내려받습니다.
+4. RAG 엔진이 문서를 읽고 검색 가능한 형태로 저장합니다.
+
+### 챗봇 질문 코드
+
+```python
+cached_answer, _score = search_similar_question(cleaned)
+if cached_answer is not None:
+    return {
+        "answer": cached_answer,
+        "cached": True,
+        "sources": [],
+    }
+
+answer = await rag_service.ask(cleaned)
+save_question_answer(cleaned, answer)
+```
+
+**쉬운 설명**
+
+| 단계 | 의미 |
+|---|---|
+| Redis 캐시 확인 | 이전에 비슷한 질문이 있으면 바로 답변 |
+| RAG 검색 | 캐시에 없으면 문서에서 관련 내용 검색 |
+| 답변 저장 | 다음 질문을 빠르게 처리하기 위해 결과 저장 |
+
+### 운영 흐름
 
 ```mermaid
 sequenceDiagram
     participant Admin as 관리자
     participant Spring as Spring Boot
     participant S3 as AWS S3
-    participant DB as PostgreSQL
     participant FastAPI as FastAPI RAG
-    participant RAG as RAGAnything / LightRAG
+    participant User as 사용자
+    participant Redis as Redis Cache
+    participant LLM as OpenAI
 
-    Admin->>Spring: PDF 문서 업로드
-    Spring->>S3: 파일 저장
-    Spring->>DB: tbl_file, tbl_rag_document 저장
-    Spring->>FastAPI: POST /api/rag/ingest with s3Key
-    FastAPI->>S3: 문서 다운로드
-    FastAPI->>RAG: 문서 파싱·청크 분할·임베딩
-    RAG-->>FastAPI: 적재 완료
-    FastAPI-->>Spring: ingest 완료 응답
+    Admin->>Spring: PDF 업로드
+    Spring->>S3: 문서 저장
+    Spring->>FastAPI: /api/rag/ingest
+    FastAPI->>S3: 문서 다운로드 및 적재
+
+    User->>Spring: 챗봇 질문
+    Spring->>FastAPI: /api/chat/query
+    FastAPI->>Redis: 유사 질문 캐시 확인
+    FastAPI->>LLM: 문서 근거 기반 답변 생성
+    FastAPI-->>Spring: 답변 반환
+    Spring-->>User: 챗봇 응답 표시
 ```
-
-### 기술 구성
-
-| 구성 | 사용 기술 |
-|---|---|
-| 문서 파싱 | RAGAnything, Docling |
-| 검색 엔진 | LightRAG hybrid query |
-| 임베딩 | HuggingFace `jhgan/ko-sbert-nli` |
-| 답변 생성 | OpenAI 모델 |
-| 캐시 | Redis Semantic Cache |
-| 파일 저장 | AWS S3 |
-| 메타 저장 | PostgreSQL `tbl_file`, `tbl_rag_document` |
-
-### 챗봇 질의 흐름
-
-```mermaid
-flowchart LR
-    A["사용자 질문"] --> B["Spring /ai/chat/query"]
-    B --> C["FastAPI /api/chat/query"]
-    C --> D{"Redis Semantic Cache hit?"}
-    D -- Yes --> E["캐시 답변 반환"]
-    D -- No --> F["RAG hybrid query"]
-    F --> G["prompt.yml 시스템 프롬프트 적용"]
-    G --> H["OpenAI 답변 생성"]
-    H --> I["Redis 캐시 저장"]
-    I --> J["답변 반환"]
-```
-
-### 화면 연결
-
-| 구분 | 경로 |
-|---|---|
-| 전역 AI 챗봇 화면 | `src/main/resources/templates/video_ai/video_ai.html` |
-| 전역 AI 챗봇 JS | `src/main/resources/static/js/video_ai/event.js` |
-| 관리자 RAG 업로드 API | `src/main/java/com/app/globalgates/controller/admin/AdminRagAPIController.java` |
-| Spring RAG Service | `src/main/java/com/app/globalgates/service/RagService.java` |
-| FastAPI RAG Router | `C:\gb_0900_hsh\fastapi\workspace\globalgates\router\rag.py` |
-| FastAPI RAG Service | `C:\gb_0900_hsh\fastapi\workspace\globalgates\service\RAG_service.py` |
 
 ---
 
-## 6. LLM (n8n) — RSS 뉴스 요약 자동화
+## 6. n8n - 뉴스 요약 자동화
 
-> **목표**: 외부 경제/무역 뉴스를 자동 수집하고 OpenAI로 한국어 요약을 생성
+> **목표**: RSS 뉴스를 자동으로 수집하고, OpenAI를 이용해 한국어 요약을 생성합니다.
 
-### n8n 워크플로우 구성
+### 워크플로우 구성
 
 | 워크플로우 | 노드 수 | 주요 노드 |
 |---|---:|---|
 | Webhook 기반 뉴스 요약 | 8개 | RSS Feed Read, Code, OpenAI, HTML, HTTP Request, Webhook Response |
-| Schedule 기반 확장 워크플로우 | 10개 | Schedule Trigger, RSS Feed Read, OpenAI, PostgreSQL, Webhook Response |
-
-### 자동화 흐름
+| Schedule 기반 확장 워크플로우 | 10개 | Schedule Trigger, RSS Feed Read, OpenAI, PostgreSQL |
 
 ```mermaid
 flowchart TD
-    A["Schedule Trigger 또는 Webhook"] --> B["RSS Feed Read"]
-    B --> C["Code Node<br/>뉴스 제목·본문 병합"]
-    C --> D["OpenAI Node<br/>한국어 요약 생성"]
-    D --> E["HTML Node<br/>요약 화면 구성"]
-    E --> F["Webhook Response 또는 DB 저장"]
+    A["Webhook 또는 Schedule Trigger"] --> B["RSS Feed Read"]
+    B --> C["Code Node<br/>뉴스 제목/본문 정리"]
+    C --> D["OpenAI Node<br/>한국어 요약"]
+    D --> E["HTML Node<br/>결과 화면 구성"]
+    E --> F["Webhook 응답 또는 DB 저장"]
 ```
 
 ### 프롬프트 정책
 
-| 규칙 | 내용 |
+| 정책 | 설명 |
 |---|---|
-| 요약 단위 | 뉴스별 1줄 요약 |
-| 사실성 | 기사에 있는 사실만 사용 |
-| 안전성 | 과장/추측 금지 |
-| 금융 리스크 | 투자 추천, 매수·매도 조언 금지 |
-
-### n8n 관련 파일
-
-| 파일 | 역할 |
-|---|---|
-| `C:\gb_0900_hsh\ai\workspace\project\n8n-news\docker-compose.yml` | n8n 실행 환경 |
-| `C:\gb_0900_hsh\ai\workspace\project\n8n-news\n8n_news_hsh.json` | Webhook 기반 뉴스 요약 워크플로우 |
-| `C:\gb_0900_hsh\ai\workspace\project\n8n-news\My workflow copy2.json` | Schedule/PostgreSQL 확장 워크플로우 |
+| 뉴스별 1줄 요약 | 발표 화면에서 빠르게 읽을 수 있게 구성 |
+| 사실 기반 | 기사에 있는 정보만 사용 |
+| 추측 금지 | 불확실한 전망이나 과장 표현 제외 |
+| 투자 조언 금지 | 매수/매도 추천 같은 금융 조언 차단 |
 
 ---
 
-## 7. 서비스 연동 — Spring Boot와 FastAPI 연결 구조
+## 7. 서비스 연동 구조
 
-Spring Boot는 사용자가 보는 화면, 인증, DB 중심 비즈니스 로직을 담당하고, FastAPI는 AI 추론과 RAG 처리를 담당합니다.
+GlobalGates는 화면과 회원/상품 관리는 Spring Boot가 담당하고,
+AI 추론과 RAG 처리는 FastAPI가 담당합니다.
 
 ```mermaid
 flowchart TB
-    Browser["User Browser<br/>Thymeleaf + JavaScript"] --> Spring["Spring Boot<br/>Web / Auth / Business Logic"]
-    Spring --> PostgreSQL["PostgreSQL<br/>Service DB"]
-    Spring --> S3["AWS S3<br/>Files / RAG Documents"]
-    Spring --> FastAPI["FastAPI AI Server<br/>Classification / Recommendation / RAG"]
-    FastAPI --> Model["ML Artifacts<br/>Naive Bayes / Encoder"]
-    FastAPI --> Redis["Redis<br/>Semantic Cache"]
-    FastAPI --> RAGStorage["RAG Storage<br/>Parsed Documents / Vectors"]
-    FastAPI --> OpenAI["OpenAI<br/>LLM Answer Generation"]
-    N8N["n8n<br/>RSS Automation"] --> OpenAI
-    N8N --> PostgreSQL
+    Browser["사용자 브라우저"] --> Spring["Spring Boot<br/>화면 · 로그인 · 비즈니스 로직"]
+    Spring --> DB["PostgreSQL<br/>회원 · 상품 · 팔로우"]
+    Spring --> S3["AWS S3<br/>RAG 문서 저장"]
+    Spring --> FastAPI["FastAPI<br/>AI 전용 서버"]
+    FastAPI --> ML["ML 모델<br/>Naive Bayes · 추천"]
+    FastAPI --> Redis["Redis<br/>챗봇 캐시"]
+    FastAPI --> RAG["RAG Storage<br/>문서 검색"]
+    FastAPI --> OpenAI["OpenAI<br/>답변 생성 · 뉴스 요약"]
+    N8N["n8n"] --> OpenAI
 ```
 
-### API 연결 표
+### Spring Boot가 FastAPI를 호출하는 코드
 
-| 기능 | Spring 경로 | FastAPI 경로 | 설명 |
+```java
+return fastApiClient().post()
+        .uri("/api/ai/category/predict")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(productCategoryRecommendationRequestDTO)
+        .retrieve()
+        .bodyToMono(ProductCategoryRecommendationResponseDTO.class);
+```
+
+**쉬운 설명**
+
+Spring Boot는 사용자가 보는 화면 서버입니다.
+하지만 AI 모델은 Python/FastAPI 서버에 있기 때문에, Spring이 FastAPI에 요청을 보내고 결과만 받아서 화면에 보여줍니다.
+
+### API 연결표
+
+| 기능 | Spring API | FastAPI API | 결과 |
 |---|---|---|---|
-| 카테고리 추천 | `/ai/category/predict` | `/api/ai/category/predict` | 상품 텍스트 기반 카테고리 Top-3 |
-| 팔로우 추천 | `/ai/follow/recommend/{memberId}` | `/api/ai/follow/recommend` | 추천 회원 목록 반환 |
+| 카테고리 추천 | `/ai/category/predict` | `/api/ai/category/predict` | 상품 카테고리 Top-3 |
+| 팔로우 추천 | `/ai/follow/recommend/{memberId}` | `/api/ai/follow/recommend` | 추천 회원 목록 |
 | AI 챗봇 | `/ai/chat/query` | `/api/chat/query` | RAG 기반 답변 |
-| RAG 문서 적재 | `/api/admin/rag/documents` | `/api/rag/ingest` | 관리자 문서 업로드 및 적재 |
-
-### 실행 기준
-
-| 구분 | 위치 | 실행 |
-|---|---|---|
-| Spring Boot | `C:\gb_0900_hsh\aws\workspace\globalgates` | `./gradlew bootRun` |
-| FastAPI | `C:\gb_0900_hsh\fastapi\workspace\globalgates` | `uvicorn main:app --reload` |
-| n8n | `C:\gb_0900_hsh\ai\workspace\project\n8n-news` | `docker compose up -d` |
+| RAG 문서 적재 | `/api/admin/rag/documents` | `/api/rag/ingest` | PDF 문서 인덱싱 |
 
 ---
 
-## 8. 구현 결과 & 발표 핵심 포인트
-
-### 구현 결과 요약
+## 8. 발표 핵심 정리
 
 | 영역 | 구현 결과 | 정량 근거 |
 |---|---|---|
 | 분류 | 상품 등록 화면에서 카테고리 Top-3 추천 | 176,426건 학습, Accuracy 0.9406, AUC 0.9946 |
 | 추천 | 프로필/관심사 기반 팔로우 추천 | 회원 508명, 팔로우 2,422건, 관계 1,605건 |
-| RAG | 관리자 PDF 업로드 후 무역 문서 챗봇 질의 | PDF 11개, 315페이지, 1,469청크 |
-| n8n | RSS 뉴스 수집 및 OpenAI 요약 자동화 | 8노드 Webhook 워크플로우, 10노드 Schedule 확장 |
-| 연동 | Spring 화면과 FastAPI AI 서버 연결 | WebClient 기반 4개 주요 AI API 연동 |
+| RAG | PDF 업로드 후 무역 문서 챗봇 질의 | PDF 11개, 315페이지, 1,469청크 |
+| n8n | RSS 뉴스 수집 및 OpenAI 요약 자동화 | 8노드 Webhook, 10노드 Schedule 워크플로우 |
+| 연동 | Spring Boot 화면과 FastAPI AI 서버 연결 | 4개 주요 AI API 연동 |
 
-### 발표에서 강조할 포인트
+### 발표에서 강조할 말
 
-1. **단순 모델 실험이 아니라 실제 서비스 화면에 연결된 AI 기능**
-   - 상품 등록 화면에서 바로 카테고리 추천 결과가 렌더링됩니다.
-
-2. **Naive Bayes를 선택한 이유가 명확함**
-   - 텍스트 분류에서 빠르고 안정적이며, Decision Tree 대비 성능도 더 높았습니다.
-
-3. **추천 시스템은 서비스 DB 구조와 직접 연결됨**
-   - 회원, 관심 카테고리, 팔로우, 차단 관계를 모두 반영합니다.
-
-4. **RAG는 운영 흐름까지 고려함**
-   - 관리자 업로드, S3 저장, 문서 메타 상태 관리, FastAPI ingest까지 연결했습니다.
-
-5. **n8n으로 AI 기능을 서비스 밖 자동화까지 확장함**
-   - RSS 뉴스 수집, OpenAI 요약, HTML/Webhook 응답까지 하나의 워크플로우로 구성했습니다.
+1. **AI 모델 실험에서 끝난 것이 아니라 실제 화면에 연결했습니다.**
+2. **분류는 94% 수준의 정확도와 0.99 수준의 AUC를 확보했습니다.**
+3. **추천은 회원 프로필, 관심 카테고리, 팔로우/차단 관계를 함께 반영했습니다.**
+4. **RAG는 관리자 업로드, S3 저장, 문서 적재, 챗봇 응답까지 운영 흐름을 구현했습니다.**
+5. **n8n은 서비스 내부 AI를 넘어 외부 뉴스 자동화까지 확장한 사례입니다.**
 
 ### 한 줄 결론
 
 > GlobalGates AI는 상품을 **분류**하고, 사람을 **추천**하고, 문서를 **질의**하고, 뉴스를 **자동 요약**하여  
 > 중소기업의 글로벌 B2B 활동을 더 빠르고 정확하게 돕는 서비스형 AI 구조입니다.
-
