@@ -350,7 +350,6 @@ print(cosine_full.shape)
 
 ![팔로우 추천 검증](images/globalgates_follower_recommender_01.png)
 
-![팔로우/인기도 분포](images/globalgates_follower_recommender_profile_score_01.png)
 
 ### 후보 제외 로직
 
